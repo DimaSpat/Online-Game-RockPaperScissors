@@ -1,0 +1,24 @@
+<ul>
+  <li>
+    <p>General</p>
+    <ul>
+      <li>Name: <%= user.name %></li>
+      <li>
+        <form action="/profile" method="post">
+          <label for="password">Reset Password:</label>
+          <input type="password" name="password">
+          <input type="submit" value="Reset">
+        </form>
+      </li>
+    </ul>
+  </li>
+  <li>
+    <p>Game specific</p>
+    <ul>
+      <li>Rounds played: </li>
+      <li>Rounds won: </li>
+      <li>Rounds lost: </li>
+      <li>Wins per lose: </li>
+    </ul>
+  </li>
+</ul>

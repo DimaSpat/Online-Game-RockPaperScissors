@@ -1,0 +1,7 @@
+<% if (user) { %>
+  <h1>Hello, <%= user.name %></h1>
+<% } %>
+<p>Welcome to <%= title %></p>
+<% if (!user) { %>
+  <p><a href="/users/reg">Sign Up</a> or <a href="/users/login">Log In</a> to be able to start playing</p>
+<% } %>

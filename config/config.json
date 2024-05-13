@@ -1,0 +1,5 @@
+{
+  "port": 3000,
+  "mongodb": "mongodb://127.0.0.1:27017/gamedb",
+  "log_format": "Date - :date[web] | Method - :method | URL - :url | Status - :status"
+}

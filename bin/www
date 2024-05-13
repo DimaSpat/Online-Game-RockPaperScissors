@@ -1,0 +1,152 @@
+#!/usr/bin/env node
+
+/**
+ * Module dependencies.
+ */
+
+var { app, sessionMiddleware } = require("../app");
+var debug = require("debug")("rockpapersisors:server");
+var http = require("http");
+var config = require("../config");
+var mongoose = require("mongoose");
+
+/**
+ * Get port from environment and store in Express.
+ */
+
+var port = normalizePort(process.env.PORT || config.get("port"));
+app.set("port", port);
+
+/**
+ * Create HTTP server.
+ */
+
+var server = http.createServer(app);
+var io = require("socket.io")(server);
+
+io.use(function (socket, next) {
+  sessionMiddleware(socket.request, {}, next);
+});
+
+let players = {};
+let unmatchedPlayerId;
+
+function joinPlayer(socket) {
+  players[socket.id] = {
+    opponent: unmatchedPlayerId,
+    symbol: "1",
+    socket: socket,
+  };
+  if (unmatchedPlayerId) {
+    players[socket.id].symbol = "2";
+    players[unmatchedPlayerId].opponent = socket.id;
+    unmatchedPlayerId = null;
+  } else {
+    unmatchedPlayerId = socket.id;
+  }
+}
+
+function getOpponentSocket(socket) {
+  if (!players[socket.id].opponent) {
+    return;
+  }
+  const getOpponentSocketId = players[socket.id].opponent;
+  return players[getOpponentSocketId].socket;
+}
+
+io.on("connection", function (socket) {
+  const user = socket.request.session.user;
+  joinPlayer(socket);
+
+  if (getOpponentSocket(socket)) {
+    socket.emit("game.begin", { symbol: players[socket.id].symbol });
+    getOpponentSocket(socket).emit("game.begin", {
+      symbol: players[getOpponentSocket(socket).id].symbol,
+    });
+  }
+
+  socket.on("make.move", function (data) {
+    if (!getOpponentSocket(socket)) {
+      return;
+    }
+    socket.emit("move.made", data);
+    getOpponentSocket(socket).emit("move.made", data);
+  });
+
+  socket.on("disconnect", function () {
+    if (getOpponentSocket(socket)) {
+      getOpponentSocket(socket).emit("opponent.left");
+    }
+  });
+});
+
+/**
+ * Listen on provided port, on all network interfaces.
+ */
+
+async function main() {
+  await mongoose.connect(config.get("mongodb"));
+  console.log("Connected successfully to the server");
+
+  server.listen(port);
+  server.on("error", onError);
+  server.on("listening", onListening);
+}
+
+main().catch((error) => console.log(error));
+
+/**
+ * Normalize a port into a number, string, or false.
+ */
+
+function normalizePort(val) {
+  var port = parseInt(val, 10);
+
+  if (isNaN(port)) {
+    // named pipe
+    return val;
+  }
+
+  if (port >= 0) {
+    // port number
+    return port;
+  }
+
+  return false;
+}
+
+/**
+ * Event listener for HTTP server "error" event.
+ */
+
+function onError(error) {
+  if (error.syscall !== "listen") {
+    throw error;
+  }
+
+  var bind = typeof port === "string" ? "Pipe " + port : "Port " + port;
+
+  // handle specific listen errors with friendly messages
+  switch (error.code) {
+    case "EACCES":
+      console.error(bind + " requires elevated privileges");
+      process.exit(1);
+      break;
+    case "EADDRINUSE":
+      console.error(bind + " is already in use");
+      process.exit(1);
+      break;
+    default:
+      throw error;
+  }
+}
+
+/**
+ * Event listener for HTTP server "listening" event.
+ */
+
+function onListening() {
+  var addr = server.address();
+  var bind = typeof addr === "string" ? "pipe " + addr : "port " + addr.port;
+  debug("Listening on " + bind);
+}

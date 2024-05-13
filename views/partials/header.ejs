@@ -1,0 +1,17 @@
+<header>
+  <h1><%= title %></h1>
+  <nav>
+    <ul>
+      <li><a href="/">Home</a></li>
+      <% if (!user) { %>
+        <li><a href="/users/reg">Sign Up</a></li>
+        <li><a href="/users/login">Log In</a></li>
+      <% } else { %>
+        <li><a href="/profile">Profile</a></li>
+        <li><a href="/game">Game</a></li>
+        <li><a href="/users/logout">Log out</a></li>
+        <li>You're <%= user.name %></li>
+      <% } %>
+    </ul>
+  </nav>
+</header>
