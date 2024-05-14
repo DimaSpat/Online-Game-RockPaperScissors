@@ -4,6 +4,7 @@ const socket = io.connect(url);
 let turn = true;
 let selected;
 let symbol;
+let otherPlayer;
 
 const message = document.getElementById("message");
 const buttons = document.querySelectorAll(".board button");
@@ -14,7 +15,7 @@ buttons.forEach((btn) => {
 });
 
 function makeMove(btn) {
-  if (!moveTurn) return;
+  if (!turn) return;
   if (btn.className == "selected");
   socket.emit("make.move", {
     symbol: symbol,
@@ -24,24 +25,32 @@ function makeMove(btn) {
 
 function renderTurnMessage() {
   if (turn) {
-    message.innerHTML = "Results";
+    message.innerHTML = "Results | other player: " + otherPlayer;
     buttons.forEach((btn) => btn.setAttribute("disabled", true));
   } else {
-    message.innerHTML = "Your turn";
+    message.innerHTML = "Your turn | other player: " + otherPlayer;
     buttons.forEach((btn) => btn.removeAttribute("disabled"));
   }
 }
 
 function isGameOver() {
   let state = getBoardState();
-  let matches = [""]
+  let matches = [""];
+  let rows = [];
+
+  for (let i in rows) {
+    if (rows[i] === matches[0] || rows[i] === matches[i]) return true;
+  }
 }
 
 socket.on("game.begin", function (data) {
   symbol = data.symbol;
-  turn = symbol ? true : false;
+  otherPlayer = data.playerName;
+  turn = symbol === "1";
   renderTurnMessage();
 });
+
+console.log(otherPlayer);
 
 socket.on("move.made", function (data) {
   document.getElementById(data.position).innerHTML = data.symbol;
@@ -56,6 +65,7 @@ socket.on("move.made", function (data) {
 });
 
 socket.on("opponent.left", function () {
-  message.innerHTML = "Your opponrnt left the game.";
+  message.innerHTML = `Your opponent ${otherPlayer} left the game.`;
   buttons.forEach((btn) => btn.setAttribute("disabled", true));
+  otherPlayer = "";
 });

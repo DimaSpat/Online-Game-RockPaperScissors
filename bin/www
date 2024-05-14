@@ -47,22 +47,22 @@ function joinPlayer(socket) {
 }
 
 function getOpponentSocket(socket) {
-  if (!players[socket.id].opponent) {
-    return;
-  }
+  if (!players[socket.id].opponent) return;
   const getOpponentSocketId = players[socket.id].opponent;
   return players[getOpponentSocketId].socket;
 }
 
 io.on("connection", function (socket) {
-  const user = socket.request.session.user;
+  const user = socket.request.session.user.name;
+  console.log(user);
   joinPlayer(socket);
 
   if (getOpponentSocket(socket)) {
-    socket.emit("game.begin", { symbol: players[socket.id].symbol });
-    getOpponentSocket(socket).emit("game.begin", {
-      symbol: players[getOpponentSocket(socket).id].symbol,
+    socket.emit("game.begin", {
+      symbol: players[socket.id].symbol,
+      playerName: user,
     });
+    getOpponentSocket(socket).emit("game.begin", { symbol: players[getOpponentSocket(socket).id].symbol });
   }
 
   socket.on("make.move", function (data) {
