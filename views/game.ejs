@@ -1,8 +1,11 @@
 <div id="initial">
+  <p>Play with friends: </p>
   <button onclick="createGame()">Host Game</button>
   <input class="form-control" placeholder="Enter Code" type="text" name="" id="roomUniqueId">
   <button class="form-control" onclick="joinGame()">Join Hosted Game</button>
-  <button onclick="onlineGame()">Online</button>
+  <p>or</p>
+  Play online:
+  <button id="onlineButton" onclick="onlineGame()">Online</button>
 </div>
 <div id="gamePlay" style="display: none;">
   <div id="waitingArea"></div>
