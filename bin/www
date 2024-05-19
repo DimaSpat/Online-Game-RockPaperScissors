@@ -17,6 +17,8 @@ var mongoose = require("mongoose");
 var port = normalizePort(process.env.PORT || config.get("port"));
 app.set("port", port);
 
+console.log(`The url is: http://localhost:${port}/`);
+
 /**
  * Create HTTP server.
  */
@@ -28,56 +30,86 @@ io.use(function (socket, next) {
   sessionMiddleware(socket.request, {}, next);
 });
 
-let players = {};
-let unmatchedPlayerId;
+const rooms = {};
 
-function joinPlayer(socket) {
-  players[socket.id] = {
-    opponent: unmatchedPlayerId,
-    symbol: "1",
-    socket: socket,
-  };
-  if (unmatchedPlayerId) {
-    players[socket.id].symbol = "2";
-    players[unmatchedPlayerId].opponent = socket.id;
-    unmatchedPlayerId = null;
-  } else {
-    unmatchedPlayerId = socket.id;
+function idCreator(lenght) {
+  var result = "";
+  var charachters =
+    "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz01234568789";
+  var charachterLimit = charachters.length;
+  for (var i = 0; i < lenght; i++) {
+    result += charachters.charAt(Math.floor(Math.random() * charachterLimit));
   }
+  return result;
 }
 
-function getOpponentSocket(socket) {
-  if (!players[socket.id].opponent) {
-    return;
+function decalreWinner(roomUniqueId) {
+  let p1Choice = rooms[roomUniqueId].piChoice;
+  let p2Choice = rooms[roomUniqueId].p2Choice;
+  let winner;
+
+  if (p1Choice === p2Choice) {
+    winner = "draw";
+  } else if (p1Choice == "Paper") {
+    if (p2Choice == "Scissor") {
+      winner = "player 2";
+    } else {
+      winner = "player 1";
+    }
+  } else if (p1Choice == "Rock") {
+    if (p2Choice == "Paper") {
+      winner = "Player 2";
+    } else {
+      winner = "player 1";
+    }
+  } else if (p1Choice == "Scissors") {
+    if (p2Choice == "Rock") {
+      winner = "player 2";
+    } else {
+      winner = "player 1";
+    }
   }
-  const getOpponentSocketId = players[socket.id].opponent;
-  return players[getOpponentSocketId].socket;
+
+  io.sockets.to(roomUniqueId).emit("result", {
+    winner: winner,
+  });
 }
 
 io.on("connection", function (socket) {
-  const user = socket.request.session.user;
-  joinPlayer(socket);
+  const user = socket.request.session.user.name;
 
-  if (getOpponentSocket(socket)) {
-    socket.emit("game.begin", { symbol: players[socket.id].symbol });
-    getOpponentSocket(socket).emit("game.begin", {
-      symbol: players[getOpponentSocket(socket).id].symbol,
-    });
-  }
-
-  socket.on("make.move", function (data) {
-    if (!getOpponentSocket(socket)) {
-      return;
-    }
-    socket.emit("move.made", data);
-    getOpponentSocket(socket).emit("move.made", data);
+  socket.on("createGame", () => {
+    const roomUniqueId = idCreator(6);
+    rooms[roomUniqueId] = {};
+    socket.join(roomUniqueId);
+    socket.emit("newGame", { roomUniqueId: roomUniqueId });
   });
 
-  socket.on("disconnect", function () {
-    if (getOpponentSocket(socket)) {
-      getOpponentSocket(socket).emit("opponent.left");
+  socket.on("joinGame", (data) => {
+    if (rooms[data.roomUniqueId] != null) {
+      socket.join(data.roomUniqueId);
+      socket.to(data.roomUniqueId).emit("playersConnected", {});
+      socket.emit("playersConnected");
     }
   });
+
+  socket.on("p1Choice", function (data) {
+    rooms[data.roomUniqueId].p1Choice = data.rpsValue;
+    socket.to(data.roomUniqueId).emit("p1Choice", { rpsValue: data.rpsValue });
+    if (rooms[data.roomUniqueId].p2Choice != null) {
+      declareWinner(data.roomUniqueId);
+    }
+  });
+
+  socket.on("p2Choice", function (data) {
+    rooms[data.roomUniqueId].p2Choice = data.rpsValue;
+    socket.to(data.roomUniqueId).emit("p2Choice", { rpsValue: data.rpsValue });
+    if (rooms[data.roomUniqueId].p1Choice != null) {
+      declareWinner(data.roomUniqueId);
+    }
+  });
+
+  socket.on("disconnect", function () {});
 });
 
 /**

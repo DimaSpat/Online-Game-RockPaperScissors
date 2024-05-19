@@ -41,7 +41,7 @@ exports.addUser = async function (req, res) {
         layout: "./layouts/main-layout",
       });
     } else if (err.errors.login) {
-      -res.render("register", {
+      res.render("register", {
         errSelector: "login",
         title: "Register",
         password: req.body.password,
@@ -67,7 +67,6 @@ exports.login = async function (req, res) {
     }
   ).exec();
 
-  console.log(`user ${user.login} with password ${user.password}`);
 
   if (user) {
     req.session.user = { id: user._id, name: user.login };

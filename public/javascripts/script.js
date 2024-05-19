@@ -1,61 +1,103 @@
 const url = window.location.origin;
 const socket = io.connect(url);
 
-let turn = true;
-let selected;
-let symbol;
+const initial = document.getElementById("initial");
+const gamePlay = document.getElementById("gamePlay");
+const waitingArea = document.getElementById("waitingArea");
+const gameArea = document.getElementById("gameArea");
 
-const message = document.getElementById("message");
-const buttons = document.querySelectorAll(".board button");
+let roomUniqueId;
+let player1 = false;
 
-buttons.forEach((btn) => {
-  btn.addEventListener("click", () => makeMove(btn));
-  btn.setAttribute("disabled", true);
-});
+function createGame() {
+  player1 = true;
+  socket.emit("createGame");
+}
 
-function makeMove(btn) {
-  if (!moveTurn) return;
-  if (btn.className == "selected");
-  socket.emit("make.move", {
-    symbol: symbol,
-    position: btn.id,
+function joinGame() {
+  roomUniqueId = document.getElementById("roomUniqueId").value;
+  socket.emit("joinGame", { roomUniqueId: roomUniqueId });
+}
+
+socket.on("newGame", (data) => {
+  roomUniqueId = data.roomUniqueId;
+  initial.style.display = "none";
+  gamePlay.style.display = "block";
+
+  let copyButton = document.createElement("button");
+  copyButton.style.display = "block";
+  copyButton.innerText = "Copy Code";
+  copyButton.addEventListener("click", () => {
+    navigator.clipboard.writeText(roomUniqueId);
   });
-}
 
-function renderTurnMessage() {
-  if (turn) {
-    message.innerHTML = "Results";
-    buttons.forEach((btn) => btn.setAttribute("disabled", true));
-  } else {
-    message.innerHTML = "Your turn";
-    buttons.forEach((btn) => btn.removeAttribute("disabled"));
-  }
-}
-
-function isGameOver() {
-  let state = getBoardState();
-  let matches = [""]
-}
-
-socket.on("game.begin", function (data) {
-  symbol = data.symbol;
-  turn = symbol ? true : false;
-  renderTurnMessage();
+  waitingArea.innerHTML = `Waiting for opponent, please share code ${roomUniqueId} to join`;
+  waitingArea.appendChild(copyButton);
 });
 
-socket.on("move.made", function (data) {
-  document.getElementById(data.position).innerHTML = data.symbol;
-  turn = data.symbol !== symbol;
-  if (!isGameOver()) {
-    renderTurnMessage();
-  } else {
-    if (turn) message.innerHTML = "You lost.";
-    else message.innerHTML = "You won!";
-    buttons.forEach((btn) => btn.setAttribute("disabled", true));
+socket.on("playersConnected", () => {
+  waitingArea.style.display = "none";
+  gameArea.style.display = "block";
+});
+
+socket.on("p1Choice", function (data) {
+  if (!player1) {
+    createOpponentChoiceButton(data);
   }
 });
 
-socket.on("opponent.left", function () {
-  message.innerHTML = "Your opponrnt left the game.";
-  buttons.forEach((btn) => btn.setAttribute("disabled", true));
+socket.on("p2Choice", function (data) {
+  if (player1) {
+    createOpponentChoiceButton(data);
+  }
 });
+
+socket.on("result", function (data) {
+  let winnerText = "";
+
+  if (data.winner != "draw") {
+    if (data.winner == "player 1" && player1) {
+      winnerText = "You win";
+    } else if (data.winner == "player 1") {
+      winnerText = "You lose";
+    }
+    if (data.winner == "player 2" && player2) {
+      winnerText = "You win";
+    } else if (data.winner == "player 2") {
+      winnerText = "You lose";
+    }
+  } else {
+    winnerText = "It's a draw";
+  }
+
+  document.getElementById("opponentButton").style.display = "block";
+  document.getElementById("winnerArea").innerHTML = winnerText;
+});
+
+function sendChoice(choice) {
+  const choiceEvent = player1 ? "piChoice" : "p2Choice";
+  socket.emit(choiceEvent, {
+    rpsValue: choice,
+    roomUniqueId: roomUniqueId,
+  });
+
+  let player1Choice = document.getElementById("player1Choice");
+
+  player1Choice.innerHTML = "";
+
+  let playerChoiceButton = document.createElement("button");
+  playerChoiceButton.style.accentColor.display = "block";
+  playerChoiceButton.innerText = choice;
+
+  player1Choice.appendChild(playerChoiceButton);
+}
+
+function createOpponentChoiceButton(data) {
+  const player2Choice = document.getElementById("player2Choice");
+  player2Choice.innerHTML = "";
+  let opponentButton = document.createElement("button");
+  opponentButton.id = "opponentButton";
+  opponentButton.style.display = "none";
+  opponentButton.innerText = data.rpsValue;
+  player2Choice.appendChild(opponentButton);
+}
