@@ -21,6 +21,7 @@ function createGame() {
 function joinGame() {
   roomUniqueId = document.getElementById("roomUniqueId").value;
   socket.emit("joinGame", { roomUniqueId: roomUniqueId });
+  console.log("hello");
 }
 
 function onlineGame() {
@@ -31,6 +32,7 @@ socket.on("newGame", (data) => {
   roomUniqueId = data.roomUniqueId;
   initial.style.display = "none";
   gamePlay.style.display = "block";
+  gameArea.style.display = "none";
 
   let copyButton = document.createElement("button");
   copyButton.style.display = "block";
@@ -46,6 +48,7 @@ socket.on("newGame", (data) => {
 socket.on("playersConnected", () => {
   waitingArea.style.display = "none";
   gameArea.style.display = "block";
+  console.log("Hello");
 });
 
 socket.on("p1Choice", function (data) {
@@ -115,5 +118,3 @@ function createOpponentChoiceButton(data) {
   opponentButton.innerText = data.rpsValue;
   player2Choice.appendChild(opponentButton);
 }
-
-module.exports = { isWinner, gameEnd };

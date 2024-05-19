@@ -87,9 +87,11 @@ io.on("connection", function (socket) {
   });
 
   socket.on("joinGame", (data) => {
+    console.log("got");
     if (rooms[data.roomUniqueId] != null) {
       socket.join(data.roomUniqueId);
       socket.to(data.roomUniqueId).emit("playersConnected", {});
+      console.log("got it");
       socket.emit("playersConnected");
     }
   });
