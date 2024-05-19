@@ -1,6 +1,8 @@
 const url = window.location.origin;
 const socket = io.connect(url);
 
+// const gameController = require("../../controllers/game-controller");
+
 const initial = document.getElementById("initial");
 const gamePlay = document.getElementById("gamePlay");
 const waitingArea = document.getElementById("waitingArea");
@@ -8,6 +10,8 @@ const gameArea = document.getElementById("gameArea");
 
 let roomUniqueId;
 let player1 = false;
+let gameEnd = false;
+let isWinner = false;
 
 function createGame() {
   player1 = true;
@@ -17,6 +21,10 @@ function createGame() {
 function joinGame() {
   roomUniqueId = document.getElementById("roomUniqueId").value;
   socket.emit("joinGame", { roomUniqueId: roomUniqueId });
+}
+
+function onlineGame() {
+  socket.emit("onlineGame");
 }
 
 socket.on("newGame", (data) => {
@@ -58,11 +66,13 @@ socket.on("result", function (data) {
   if (data.winner != "draw") {
     if (data.winner == "player 1" && player1) {
       winnerText = "You win";
+      isWinner = true;
     } else if (data.winner == "player 1") {
       winnerText = "You lose";
     }
-    if (data.winner == "player 2" && player2) {
+    if (data.winner == "player 2" && !player1) {
       winnerText = "You win";
+      isWinner = true;
     } else if (data.winner == "player 2") {
       winnerText = "You lose";
     }
@@ -72,6 +82,10 @@ socket.on("result", function (data) {
 
   document.getElementById("opponentButton").style.display = "block";
   document.getElementById("winnerArea").innerHTML = winnerText;
+  document.getElementById("back").style.display = "block";
+  gameEnd = true;
+
+  // gameController.updatingUser();
 });
 
 function sendChoice(choice) {
@@ -101,3 +115,5 @@ function createOpponentChoiceButton(data) {
   opponentButton.innerText = data.rpsValue;
   player2Choice.appendChild(opponentButton);
 }
+
+module.exports = { isWinner, gameEnd };

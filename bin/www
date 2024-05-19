@@ -31,6 +31,7 @@ io.use(function (socket, next) {
 });
 
 const rooms = {};
+const unmatchedPlayers = {};
 
 function idCreator(lenght) {
   var result = "";
@@ -109,7 +110,8 @@ io.on("connection", function (socket) {
     }
   });
 
-  socket.on("disconnect", function () {});
+  socket.on("disconnect", function () {
+  });
 });
 
 /**
