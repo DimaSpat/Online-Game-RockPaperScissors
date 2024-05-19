@@ -31,6 +31,7 @@ io.use(function (socket, next) {
 });
 
 const rooms = {};
+const unmatchedPlayers = {};
 
 function idCreator(lenght) {
   var result = "";
@@ -86,9 +87,11 @@ io.on("connection", function (socket) {
   });
 
   socket.on("joinGame", (data) => {
+    console.log("got");
     if (rooms[data.roomUniqueId] != null) {
       socket.join(data.roomUniqueId);
       socket.to(data.roomUniqueId).emit("playersConnected", {});
+      console.log("got it");
       socket.emit("playersConnected");
     }
   });
@@ -109,7 +112,8 @@ io.on("connection", function (socket) {
     }
   });
 
-  socket.on("disconnect", function () {});
+  socket.on("disconnect", function () {
+  });
 });
 
 /**
