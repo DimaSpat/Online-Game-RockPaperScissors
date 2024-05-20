@@ -32,6 +32,7 @@ io.use(function (socket, next) {
 
 const rooms = {};
 const waitingQueue = [];
+const onlineMode = false;
 
 function idCreator(length) {
   var result = "";
@@ -115,6 +116,10 @@ io.on("connection", function (socket) {
     if (rooms[data.roomUniqueId].p1Choice != null) {
       declareWinner(data.roomUniqueId);
     }
+  });
+
+  socket.on("roundOver", (data) => {
+    io.to(data.roomUniqueId).emit("nextRound");
   });
 
   socket.on("disconnect", function () {

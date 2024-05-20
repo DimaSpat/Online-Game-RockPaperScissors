@@ -7,11 +7,16 @@ const initial = document.getElementById("initial");
 const gamePlay = document.getElementById("gamePlay");
 const waitingArea = document.getElementById("waitingArea");
 const gameArea = document.getElementById("gameArea");
+const roundsArea = document.getElementById("roundsArea");
+const winnerArea = document.getElementById("winnerArea");
 
 let roomUniqueId;
 let player1 = false;
 let gameEnd = false;
-let isWinner = false;
+let isRoundWinner = false;
+let isGameWinner = false;
+let roundsWon = 0;
+let rounds = 3;
 
 function createGame() {
   player1 = true;
@@ -55,7 +60,7 @@ function showWaitingRoom() {
     clearInterval(waitingTimeInterval);
     document.body.removeChild(waitingRoom);
     initial.style.display = "none";
-  })
+  });
 }
 
 socket.on("waitingForOpponent", () => {
@@ -76,16 +81,37 @@ socket.on("newGame", (data) => {
   copyButton.addEventListener("click", () => {
     navigator.clipboard.writeText(roomUniqueId);
   });
-  navigator.clipboard.write(roomUniqueId);
-  waitingArea.innerHTML = `Waiting for opponent, please share code ${roomUniqueId} to join, the code automatically copies.`;
+  waitingArea.innerHTML = `Waiting for opponent, please share code ${roomUniqueId} to join by clicking the button below.`;
   waitingArea.appendChild(copyButton);
+});
+
+socket.on("nextRound", function () {
+  console.log("next round ready");
+
+  initial.style.display = "none";
+  waitingArea.style.display = "none";
+  gameArea.style.display = "block";
+  gamePlay.style.display = "block";
+  roundsArea.innerHTML = `<p>Rounds left: ${rounds}</p>`;
+  roundsArea.style.display = "block";
+  winnerArea.style.display = "none";
+  player1Choice.innerHTML = `
+    <button onclick="sendChoice('Rock')">Rock</button>  
+    <button onclick="sendChoice('Paper')">Paper</button>
+    <button onclick="sendChoice('Scissors')">Scissors</button>
+  `;
+  player2Choice.innerHTML = `<p id="opponentState">Waiting for Opponent...</p>`;
+  player1Choice.style.display = "block";
+  player2Choice.style.display = "block";
 });
 
 socket.on("playersConnected", () => {
   initial.style.display = "none";
   waitingArea.style.display = "none";
   gameArea.style.display = "block";
-  gamePlay.style.display = "block"; 
+  gamePlay.style.display = "block";
+  roundsArea.innerHTML = `<p>Rounds left: ${rounds}</p>`;
+  roundsArea.style.display = "block";
 });
 
 socket.on("p1Choice", function (data) {
@@ -102,17 +128,18 @@ socket.on("p2Choice", function (data) {
 
 socket.on("result", function (data) {
   let winnerText = "";
+  winnerArea.style.display = "block";
 
   if (data.winner != "draw") {
     if (data.winner == "player 1" && player1) {
       winnerText = "You win";
-      isWinner = true;
+      isRoundWinner = true;
     } else if (data.winner == "player 1") {
       winnerText = "You lose";
     }
     if (data.winner == "player 2" && !player1) {
       winnerText = "You win";
-      isWinner = true;
+      isRoundWinner = true;
     } else if (data.winner == "player 2") {
       winnerText = "You lose";
     }
@@ -121,11 +148,55 @@ socket.on("result", function (data) {
   }
 
   document.getElementById("opponentButton").style.display = "block";
-  document.getElementById("winnerArea").innerHTML = winnerText;
-  document.getElementById("back").style.display = "block";
-  gameEnd = true;
+  winnerArea.innerHTML = winnerText;
 
-  // gameController.updatingUser();
+  rounds--;
+  roundsArea.innerHTML = `<p>Rounds left: ${rounds}</p>`;
+
+  let leftTime = 0;
+  let totalTimeS = 3;
+
+  if (rounds > 0) {
+    roundsArea.innerHTML = `<p>Rounds left: ${rounds} | Time until next round: ${totalTimeS - leftTime}</p>`;
+  } else {
+    roundsArea.innerHTML = `<p>Rounds left: ${rounds} | Time until game results: ${totalTimeS - leftTime}</p>`;
+  }
+
+  let interval = setInterval(() => {
+    leftTime++;
+    if (rounds > 0) {
+      roundsArea.innerHTML = `<p>Rounds left: ${rounds} | Time until next round: ${totalTimeS - leftTime}</p>`; 
+    } else {
+      roundsArea.innerHTML = `<p>Rounds left: ${rounds} | Time until game results: ${totalTimeS - leftTime}</p>`;
+    }
+  }, 1000);
+
+  setTimeout(() => {
+    clearInterval(interval);
+
+    if (rounds > 0) {
+      if (isRoundWinner) {
+        roundsWon++;
+        isRoundWinner = false;
+      }
+      socket.emit("roundOver", { roomUniqueId: roomUniqueId });
+    } else {
+      roundsArea.style.display = "none";
+      if (roundsWon > rounds / 2) {
+        winnerText = "You win the game with a score of " + roundsWon;
+        isGameWinner = true;
+        document.getElementById("back").style.display = "block";
+        // TODO: excecute the game controller to send the new stats to the player's database
+      } else if (roundsWon == Math.floor(rounds / 2 - .5) || roundsWon == 0) {
+        winnerText = "You tied the game with a score of " + roundsWon;
+        document.getElementById("back").style.display = "block";
+      } else {
+        winnerText = "You lose the game with a score of " + roundsWon;
+        document.getElementById("back").style.display = "block";
+      }
+      winnerArea.innerHTML = winnerText;
+    }
+  }, totalTimeS * 1000);
 });
 
 function sendChoice(choice) {
@@ -149,9 +220,9 @@ function sendChoice(choice) {
 function createOpponentChoiceButton(data) {
   const player2Choice = document.getElementById("player2Choice");
   let opponentButton = document.createElement("button");
-  opponentButton.id = "opponentButton";
-  opponentButton.style.display = "block";
-  opponentButton.innerText = data.rpsValue;
   player2Choice.innerHTML = "";
+  opponentButton.id = "opponentButton";
+  opponentButton.style.display = "none";
+  opponentButton.innerText = data.rpsValue;
   player2Choice.appendChild(opponentButton);
 }
