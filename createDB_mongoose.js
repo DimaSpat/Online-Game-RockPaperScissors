@@ -32,7 +32,6 @@ async function main() {
   const findUser = await User.findOne({ login: "dima" });
   if (!findUser) {
     await user.save();
-    user.done(); 
   } else {
     console.log(`login ${findUser.login} is already taken`);
   }

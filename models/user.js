@@ -29,11 +29,6 @@ const userSchema = new mongoose.Schema({
   },
 });
 
-userSchema.methods.done = function () {
-  const greeting = `User ${this.login} has been successfully registered`;
-  console.log(greeting);
-};
-
 const User = mongoose.model("User", userSchema);
 
 module.exports = User;

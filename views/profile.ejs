@@ -2,7 +2,7 @@
   <li>
     <p>General</p>
     <ul>
-      <li>Name: <%= user.name %></li>
+      <li>Name: <%= user.login %></li>
       <li>
         <form action="/profile" method="post">
           <label for="password">Reset Password:</label>
@@ -15,10 +15,10 @@
   <li>
     <p>Game specific</p>
     <ul>
-      <li>Rounds played: </li>
-      <li>Rounds won: </li>
-      <li>Rounds lost: </li>
-      <li>Wins per lose: </li>
+      <li>Games played: <%= user.rP %></li>
+      <li>Games won: <%= user.rW %></li>
+      <li>Games lost: <%= user.rL %></li>
+      <li>Wins per lose: <%= user.WPL %></li>
     </ul>
   </li>
 </ul>

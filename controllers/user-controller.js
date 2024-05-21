@@ -12,6 +12,10 @@ exports.addUser = async function (req, res) {
   const user = new User({
     login: req.body.login,
     password: req.body.password,
+    rP: 0,
+    rW: 0,
+    rL: 0,
+    WPL: 0,
   });
 
   try {
@@ -19,7 +23,6 @@ exports.addUser = async function (req, res) {
 
     if (!findUser) {
       await user.save();
-      user.done();
       res.redirect("/");
     } else {
       res.render("register", {
@@ -69,7 +72,7 @@ exports.login = async function (req, res) {
 
 
   if (user) {
-    req.session.user = { id: user._id, name: user.login };
+    req.session.user = { id: user._id, name: user.login, rP: user.rP, rW: user.rW, rL: user.rL, WPL: user.WPL };
     res.redirect("/");
   } else {
     res.render("authorization", {
@@ -97,5 +100,40 @@ exports.resetPassword = async function (req, res) {
 
   user.password = update.password;
   user.save();
-  user.done();
 };
+
+exports.updateUserStats = async function (socket, login, gameEnd, isWinner) {
+  const user = await User.findOne({
+    login: login,
+  });
+
+  if (gameEnd) {
+    const update = {
+      rP: user.rP + 1,
+      rW: user.rW + (isWinner? 1 : 0),
+      rL: user.rL + (isWinner? 0 : 1),
+    };
+
+    Object.assign(update, {WPL: (update.rW / update.rL)});
+
+    const newSession = {
+      id: socket.request.session.user.id,
+      name: socket.request.session.user.name,
+      rP: update.rP,
+      rW: update.rW,
+      rL: update.rL,
+      WPL: update.WPL,
+    };
+
+    console.log(update.WPL);
+
+    req = newSession;
+    await User.updateOne(user, update);
+
+    user.rP = update.rP;
+    user.rW = update.rW;
+    user.rL = update.rL;
+
+    user.save();
+  }
+}

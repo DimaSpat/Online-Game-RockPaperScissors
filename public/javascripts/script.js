@@ -17,6 +17,7 @@ let isRoundWinner = false;
 let isGameWinner = false;
 let roundsWon = 0;
 let rounds = 3;
+let login;
 
 function createGame() {
   player1 = true;
@@ -39,6 +40,7 @@ function showWaitingRoom() {
   waitingRoom.innerHTML = `
     <h2>Waiting for an opponent...</h2>
     <p>Time elapsed: <span id="waitingTime">0 seconds</span></p>
+    <button id="cancelWaiting">Cancel</button>
   `;
   document.body.appendChild(waitingRoom);
 
@@ -52,20 +54,49 @@ function showWaitingRoom() {
 
   socket.on("opponentFound", () => {
     clearInterval(waitingTimeInterval);
+    waitingTime = 0;
     document.body.removeChild(waitingRoom);
     initial.style.display = "none";
   });
 
   socket.on("newGame", (data) => {
     clearInterval(waitingTimeInterval);
+    waitingTime = 0;
     document.body.removeChild(waitingRoom);
     initial.style.display = "none";
   });
+
+  document.getElementById("cancelWaiting").addEventListener("click", () => {
+    socket.emit("cancelWaiting");
+    clearInterval(waitingTimeInterval);
+    waitingTime = 0;
+    document.body.removeChild(waitingRoom);
+    initial.style.display = "block";
+  });
 }
+
+socket.on("savingInitStats", (data) => {
+  login = data.login;
+});
 
 socket.on("waitingForOpponent", () => {
   showWaitingRoom();
 });
+
+socket.on("userDisconnected", () => {
+  socket.emit("disconnectInfo", {
+    roomUniqueId: roomUniqueId,
+  });
+});
+
+socket.on("kickOnDisconnect", () => {
+  initial.style.display = "block";
+  gamePlay.style.display = "none";
+  gameArea.style.display = "none";
+  roundsArea.style.display = "none";
+  document.getElementById("back").style.display = "none";
+  waitingArea.style.display = "none";
+})
 
 socket.on("newGame", (data) => {
   roomUniqueId = data.roomUniqueId;
@@ -77,7 +108,7 @@ socket.on("newGame", (data) => {
 
   let copyButton = document.createElement("button");
   copyButton.style.display = "block";
-  copyButton.innerText = "Copy Code Again";
+  copyButton.innerText = "Copy Code";
   copyButton.addEventListener("click", () => {
     navigator.clipboard.writeText(roomUniqueId);
   });
@@ -86,8 +117,6 @@ socket.on("newGame", (data) => {
 });
 
 socket.on("nextRound", function () {
-  console.log("next round ready");
-
   initial.style.display = "none";
   waitingArea.style.display = "none";
   gameArea.style.display = "block";
@@ -154,20 +183,28 @@ socket.on("result", function (data) {
   roundsArea.innerHTML = `<p>Rounds left: ${rounds}</p>`;
 
   let leftTime = 0;
-  let totalTimeS = 3;
+  let totalTimeS = 1;
 
   if (rounds > 0) {
-    roundsArea.innerHTML = `<p>Rounds left: ${rounds} | Time until next round: ${totalTimeS - leftTime}</p>`;
+    roundsArea.innerHTML = `<p>Rounds left: ${rounds} | Time until next round: ${
+      totalTimeS - leftTime
+    }</p>`;
   } else {
-    roundsArea.innerHTML = `<p>Rounds left: ${rounds} | Time until game results: ${totalTimeS - leftTime}</p>`;
+    roundsArea.innerHTML = `<p>Rounds left: ${rounds} | Time until game results: ${
+      totalTimeS - leftTime
+    }</p>`;
   }
 
   let interval = setInterval(() => {
     leftTime++;
     if (rounds > 0) {
-      roundsArea.innerHTML = `<p>Rounds left: ${rounds} | Time until next round: ${totalTimeS - leftTime}</p>`; 
+      roundsArea.innerHTML = `<p>Rounds left: ${rounds} | Time until next round: ${
+        totalTimeS - leftTime
+      }</p>`;
     } else {
-      roundsArea.innerHTML = `<p>Rounds left: ${rounds} | Time until game results: ${totalTimeS - leftTime}</p>`;
+      roundsArea.innerHTML = `<p>Rounds left: ${rounds} | Time until game results: ${
+        totalTimeS - leftTime
+      }</p>`;
     }
   }, 1000);
 
@@ -185,16 +222,24 @@ socket.on("result", function (data) {
       if (roundsWon > rounds / 2) {
         winnerText = "You win the game with a score of " + roundsWon;
         isGameWinner = true;
-        document.getElementById("back").style.display = "block";
-        // TODO: excecute the game controller to send the new stats to the player's database
-      } else if (roundsWon == Math.floor(rounds / 2 - .5) || roundsWon == 0) {
+      } else if (roundsWon == Math.floor(rounds / 2 - 0.49)) {
         winnerText = "You tied the game with a score of " + roundsWon;
-        document.getElementById("back").style.display = "block";
       } else {
         winnerText = "You lose the game with a score of " + roundsWon;
-        document.getElementById("back").style.display = "block";
       }
+      gameEnd = true;
+      document.getElementById("back").style.display = "block";
       winnerArea.innerHTML = winnerText;
+      console.log(login);
+      console.log(isGameWinner);
+      socket.emit("gameOver", {
+        roomUniqueId: roomUniqueId,
+        login: login,
+        isWinner: isGameWinner,
+        gameEnd: gameEnd,
+      });
+      gameEnd = false;
+      isGameWinner = false;
     }
   }, totalTimeS * 1000);
 });
