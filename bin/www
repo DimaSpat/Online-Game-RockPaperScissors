@@ -9,6 +9,7 @@ var debug = require("debug")("rockpapersisors:server");
 var http = require("http");
 var config = require("../config");
 var mongoose = require("mongoose");
+var userController = require("../controllers/user-controller");
 
 /**
  * Get port from environment and store in Express.
@@ -32,7 +33,6 @@ io.use(function (socket, next) {
 
 const rooms = {};
 const waitingQueue = [];
-const onlineMode = false;
 
 function idCreator(length) {
   var result = "";
@@ -70,7 +70,7 @@ function declareWinner(roomUniqueId) {
 }
 
 io.on("connection", function (socket) {
-  const user = socket.request.session.user?.name || "Guest";
+  socket.emit("savingInitStats", { login: socket.request.session.user.name });
 
   socket.on("createGame", () => {
     const roomUniqueId = idCreator(6);
@@ -93,12 +93,25 @@ io.on("connection", function (socket) {
       rooms[roomUniqueId] = {};
       socket.join(roomUniqueId);
       opponentSocket.join(roomUniqueId);
-      socket.emit("newGame", { roomUniqueId: roomUniqueId, isFirstPlayer: false });
-      opponentSocket.emit("newGame", { roomUniqueId: roomUniqueId, isFirstPlayer: true });
+      socket.emit("newGame", {
+        roomUniqueId: roomUniqueId,
+        isFirstPlayer: false,
+      });
+      opponentSocket.emit("newGame", {
+        roomUniqueId: roomUniqueId,
+        isFirstPlayer: true,
+      });
       io.to(roomUniqueId).emit("playersConnected");
     } else {
       waitingQueue.push(socket);
       socket.emit("waitingForOpponent");
+    }
+  });
+
+  socket.on("cancelWaiting", () => {
+    const index = waitingQueue.indexOf(socket);
+    if (index !== -1) {
+      waitingQueue.splice(index, 1);
     }
   });
 
@@ -118,11 +131,20 @@ io.on("connection", function (socket) {
     }
   });
 
-  socket.on("roundOver", (data) => {
+  socket.on("roundOver", function (data) {
     io.to(data.roomUniqueId).emit("nextRound");
   });
 
+  socket.on("gameOver", function (data) {
+    userController.updateUserStats(socket, data.login, data.gameEnd, data.isWinner);
+    delete rooms[data.roomUniqueId];
+  });
+
   socket.on("disconnect", function () {
+    socket.emit("userDisconnected");
+    socket.on("disconnectInfo", function (data) {
+      io.to(data.roomUniqueId).emit("kickOnDisconnect");
+    });
     const index = waitingQueue.indexOf(socket);
     if (index !== -1) {
       waitingQueue.splice(index, 1);
