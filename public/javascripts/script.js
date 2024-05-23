@@ -230,8 +230,6 @@ socket.on("result", function (data) {
       gameEnd = true;
       document.getElementById("back").style.display = "block";
       winnerArea.innerHTML = winnerText;
-      console.log(login);
-      console.log(isGameWinner);
       socket.emit("gameOver", {
         roomUniqueId: roomUniqueId,
         login: login,

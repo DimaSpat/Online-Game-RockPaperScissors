@@ -114,7 +114,17 @@ exports.updateUserStats = async function (socket, login, gameEnd, isWinner) {
       rL: user.rL + (isWinner? 0 : 1),
     };
 
-    Object.assign(update, {WPL: (update.rW / update.rL)});
+    function getWPL(rW, rL) {
+      if (rW === 0) {
+        return 0;
+      } else if (rL === 0 && rW !== 0) {
+        return rW;
+      } else if (rL!== 0 && rW !== 0) {
+        return (rW / rL);
+      }
+    }
+
+    Object.assign(update, {WPL: getWPL(update.rW, update.rL)});
 
     const newSession = {
       id: socket.request.session.user.id,
@@ -124,8 +134,6 @@ exports.updateUserStats = async function (socket, login, gameEnd, isWinner) {
       rL: update.rL,
       WPL: update.WPL,
     };
-
-    console.log(update.WPL);
 
     req = newSession;
     await User.updateOne(user, update);
