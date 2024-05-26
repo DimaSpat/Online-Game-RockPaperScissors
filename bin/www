@@ -33,6 +33,7 @@ io.use(function (socket, next) {
 
 const rooms = {};
 const waitingQueue = [];
+const index = [];
 
 function idCreator(length) {
   var result = "";
@@ -49,7 +50,6 @@ function declareWinner(roomUniqueId, gameEnd) {
   let p1Choice = rooms[roomUniqueId].p1Choice;
   let p2Choice = rooms[roomUniqueId].p2Choice;
   let winner;
-
 
   if (!gameEnd) {
     if (p1Choice === p2Choice) {
@@ -140,19 +140,41 @@ io.on("connection", function (socket) {
   });
 
   socket.on("gameOver", function (data) {
-    userController.updateUserStats(socket, data.login, data.gameEnd, data.isWinner);
-    delete rooms[data.roomUniqueId];
+    userController.updateUserStats(
+      socket,
+      data.login,
+      data.gameEnd,
+      data.isWinner
+    ); 
+  });
+
+  socket.on("playAgain", function (data) {
+    const roomUniqueId = data.roomUniqueId;
+    const playAgain = data.playAgain;
+
+    if (playAgain) {
+      if (rooms[roomUniqueId]) {
+        rooms[roomUniqueId].p1Choice = null;
+        rooms[roomUniqueId].p2Choice = null;
+        io.to(roomUniqueId).emit("newGame", { roomUniqueId: roomUniqueId });
+      }
+    } else {
+      if (rooms[roomUniqueId]) {
+        io.to(roomUniqueId).emit("getBack");
+        delete rooms[data.roomUniqueId];
+      }
+    }
   });
 
   socket.on("disconnect", function () {
-    socket.emit("userDisconnected");
-    socket.on("disconnectInfo", function (data) {
-      io.to(data.roomUniqueId).emit("kickOnDisconnect");
+    const rooms = Array.from(socket.rooms).filter((room) => room !== socket.id);
+    rooms.forEach((room) => {
+      socket.to(room).emit("playerDisconnected", { id: socket.id });
+      delete rooms[room];
     });
+
     const index = waitingQueue.indexOf(socket);
-    if (index !== -1) {
-      waitingQueue.splice(index, 1);
-    }
+    if (index !== -1) waitingQueue.splice(index, 1);
   });
 });
 

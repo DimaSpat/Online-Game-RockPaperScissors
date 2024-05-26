@@ -9,6 +9,7 @@ const waitingArea = document.getElementById("waitingArea");
 const gameArea = document.getElementById("gameArea");
 const roundsArea = document.getElementById("roundsArea");
 const winnerArea = document.getElementById("winnerArea");
+const back = document.getElementById("back");
 
 let roomUniqueId;
 let player1 = false;
@@ -83,10 +84,8 @@ socket.on("waitingForOpponent", () => {
   showWaitingRoom();
 });
 
-socket.on("userDisconnected", () => {
-  socket.emit("disconnectInfo", {
-    roomUniqueId: roomUniqueId,
-  });
+socket.on("playerDisconnected", (data) => {
+  console.log("player disconnected: ", data.id);
 });
 
 socket.on("kickOnDisconnect", () => {
@@ -94,15 +93,16 @@ socket.on("kickOnDisconnect", () => {
   gamePlay.style.display = "none";
   gameArea.style.display = "none";
   roundsArea.style.display = "none";
-  document.getElementById("back").style.display = "none";
+  back.style.display = "none";
   waitingArea.style.display = "none";
-})
+});
 
 socket.on("newGame", (data) => {
   roomUniqueId = data.roomUniqueId;
   initial.style.display = "none";
   gamePlay.style.display = "block";
   gameArea.style.display = "none";
+  winnerArea.style.display = "none";
 
   if (!player1) player1 = data.isFirstPlayer;
 
@@ -123,7 +123,6 @@ socket.on("nextRound", function () {
   gamePlay.style.display = "block";
   roundsArea.innerHTML = `<p>Rounds left: ${rounds}</p>`;
   roundsArea.style.display = "block";
-  winnerArea.style.display = "none";
   player1Choice.innerHTML = `
     <button onclick="sendChoice('Rock')">Rock</button>  
     <button onclick="sendChoice('Paper')">Paper</button>
@@ -176,14 +175,17 @@ socket.on("result", function (data) {
     winnerText = "It's a draw";
   }
 
+  let area = document.createElement("p");
+  area.innerText = winnerText;
+  winnerArea.appendChild(area);
+
   document.getElementById("opponentButton").style.display = "block";
-  winnerArea.innerHTML = winnerText;
 
   rounds--;
   roundsArea.innerHTML = `<p>Rounds left: ${rounds}</p>`;
 
   let leftTime = 0;
-  let totalTimeS = 1;
+  let totalTimeS = 3;
 
   if (rounds > 0) {
     roundsArea.innerHTML = `<p>Rounds left: ${rounds} | Time until next round: ${
@@ -228,8 +230,10 @@ socket.on("result", function (data) {
         winnerText = "You lose the game with a score of " + roundsWon;
       }
       gameEnd = true;
-      document.getElementById("back").style.display = "block";
-      winnerArea.innerHTML = winnerText;
+      back.style.display = "block";
+      let gameValues = document.createElement("p");
+      gameValues.innerText = winnerText;
+      winnerArea.appendChild(gameValues);
       socket.emit("gameOver", {
         roomUniqueId: roomUniqueId,
         login: login,
@@ -238,6 +242,34 @@ socket.on("result", function (data) {
       });
       gameEnd = false;
       isGameWinner = false;
+      back.innerHTML = `
+        <button id="playAgainButton">Play Again</button>
+        <button id="cancelAgainButton">Cancel</button>
+      `;
+      document
+        .getElementById("playAgainButton")
+        .addEventListener("click", () => {
+          socket.emit("playAgain", {
+            roomUniqueId: roomUniqueId,
+            playAgain: true,
+          });
+          document.getElementById("cancelAgainButton").style.display = "none";    
+          document.getElementById("cancelAgainButton").disabled = true;
+        });
+      document
+        .getElementById("cancelAgainButton")
+        .addEventListener("click", () => {
+          socket.emit("playAgain", {
+            roomUniqueId: roomUniqueId,
+            playAgain: false,
+          });
+          document.getElementById("playAgainButton").style.display = "none";
+          document.getElementById("playAgainButton").disabled = true;
+        });
+
+      socket.on("getBack", () => {
+        back.innerHTML = `<p><a href="/game">Get back</a> to play an other game or <a href="/">go to main page</a></p>`;
+      })
     }
   }, totalTimeS * 1000);
 });
