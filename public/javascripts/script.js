@@ -99,6 +99,7 @@ socket.on("kickOnDisconnect", () => {
 
 socket.on("newGame", (data) => {
   roomUniqueId = data.roomUniqueId;
+  console.log(roomUniqueId);
   initial.style.display = "none";
   gamePlay.style.display = "block";
   gameArea.style.display = "none";
@@ -253,12 +254,13 @@ socket.on("result", function (data) {
             roomUniqueId: roomUniqueId,
             playAgain: true,
           });
-          document.getElementById("cancelAgainButton").style.display = "none";    
+          document.getElementById("cancelAgainButton").style.display = "none";
           document.getElementById("cancelAgainButton").disabled = true;
         });
       document
         .getElementById("cancelAgainButton")
         .addEventListener("click", () => {
+          console.log(player1);
           socket.emit("playAgain", {
             roomUniqueId: roomUniqueId,
             playAgain: false,
@@ -269,7 +271,7 @@ socket.on("result", function (data) {
 
       socket.on("getBack", () => {
         back.innerHTML = `<p><a href="/game">Get back</a> to play an other game or <a href="/">go to main page</a></p>`;
-      })
+      });
     }
   }, totalTimeS * 1000);
 });

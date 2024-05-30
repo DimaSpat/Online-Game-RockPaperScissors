@@ -33,7 +33,6 @@ io.use(function (socket, next) {
 
 const rooms = {};
 const waitingQueue = [];
-const index = [];
 
 function idCreator(length) {
   var result = "";
@@ -94,6 +93,7 @@ io.on("connection", function (socket) {
     if (waitingQueue.length > 0) {
       const opponentSocket = waitingQueue.shift();
       const roomUniqueId = idCreator(6);
+      const roomPlayers = [];
       rooms[roomUniqueId] = {};
       socket.join(roomUniqueId);
       opponentSocket.join(roomUniqueId);
@@ -105,7 +105,18 @@ io.on("connection", function (socket) {
         roomUniqueId: roomUniqueId,
         isFirstPlayer: true,
       });
+      roomPlayers.push(
+        { socket: socket.id},
+        { socket: opponentSocket.id}
+      );
+
       io.to(roomUniqueId).emit("playersConnected");
+      Object.assign(rooms[roomUniqueId], { id: roomPlayers });
+
+      console.log(rooms[roomUniqueId].id);
+      console.log(rooms[roomUniqueId].id.find((player) => player.socket === socket.id).playAgain);
+      // console.log(rooms[roomUniqueId].id[rooms[roomUniqueId].id.indexOf(socket.id)].message);
+      // console.log(rooms[roomUniqueId].id[rooms[roomUniqueId].id.indexOf(opponentSocket.id)]);
     } else {
       waitingQueue.push(socket);
       socket.emit("waitingForOpponent");
@@ -145,24 +156,38 @@ io.on("connection", function (socket) {
       data.login,
       data.gameEnd,
       data.isWinner
-    ); 
+    );
   });
 
   socket.on("playAgain", function (data) {
     const roomUniqueId = data.roomUniqueId;
-    const playAgain = data.playAgain;
+    const currentUserValues = rooms[roomUniqueId].id.find((player) => player.socket === socket.id);
 
-    if (playAgain) {
-      if (rooms[roomUniqueId]) {
-        rooms[roomUniqueId].p1Choice = null;
-        rooms[roomUniqueId].p2Choice = null;
-        io.to(roomUniqueId).emit("newGame", { roomUniqueId: roomUniqueId });
+    Object.assign(currentUserValues, {playAgain: data.playAgain});
+
+    console.log(data.playAgain);
+    console.log(currentUserValues);
+
+    const getPlayAgain = rooms[roomUniqueId].id.map((a) => a.playAgain);
+    console.log(getPlayAgain);
+
+    if (!getPlayAgain.some(elem => elem === undefined)) {
+      const isAllPlayAgain = getPlayAgain.every(v => v === true);
+    
+      if (isAllPlayAgain) {
+        if (rooms[roomUniqueId]) {
+          rooms[roomUniqueId].p1Choice = null;
+          rooms[roomUniqueId].p2Choice = null;
+          io.to(roomUniqueId).emit("newGame", { roomUniqueId: roomUniqueId });
+        }
+      } else {
+        if (rooms[roomUniqueId]) {
+          io.to(roomUniqueId).emit("getBack");
+          delete rooms[data.roomUniqueId];
+        }
       }
     } else {
-      if (rooms[roomUniqueId]) {
-        io.to(roomUniqueId).emit("getBack");
-        delete rooms[data.roomUniqueId];
-      }
+      console.log("got undefined");
     }
   });
 
