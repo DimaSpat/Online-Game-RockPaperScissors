@@ -134,6 +134,33 @@ socket.on("nextRound", function () {
   player2Choice.style.display = "block";
 });
 
+socket.on("gamePlayAgain", function () {
+  gameEnd = false;
+  isRoundWinner = false;
+  isGameWinner = false;
+  roundsWon = 0;
+  rounds = 3;
+
+  initial.style.display = "none";
+  waitingArea.style.display = "none";
+  gameArea.style.display = "block";
+  gamePlay.style.display = "block";
+  roundsArea.innerHTML = `<p>Rounds left: ${rounds}</p>`;
+  roundsArea.style.display = "block";
+  player1Choice.innerHTML = `
+    <button onclick="sendChoice('Rock')">Rock</button>  
+    <button onclick="sendChoice('Paper')">Paper</button>
+    <button onclick="sendChoice('Scissors')">Scissors</button>
+  `;
+  player2Choice.innerHTML = `<p id="opponentState">Waiting for Opponent...</p>`;
+  player1Choice.style.display = "block";
+  player2Choice.style.display = "block";
+  winnerArea.style.display = "none";
+  winnerArea.innerHTML = `<p>History:</p>`;
+  back.style.display = "none";
+  back.innerHTML = ``;
+})
+
 socket.on("playersConnected", () => {
   initial.style.display = "none";
   waitingArea.style.display = "none";

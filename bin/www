@@ -112,11 +112,6 @@ io.on("connection", function (socket) {
 
       io.to(roomUniqueId).emit("playersConnected");
       Object.assign(rooms[roomUniqueId], { id: roomPlayers });
-
-      console.log(rooms[roomUniqueId].id);
-      console.log(rooms[roomUniqueId].id.find((player) => player.socket === socket.id).playAgain);
-      // console.log(rooms[roomUniqueId].id[rooms[roomUniqueId].id.indexOf(socket.id)].message);
-      // console.log(rooms[roomUniqueId].id[rooms[roomUniqueId].id.indexOf(opponentSocket.id)]);
     } else {
       waitingQueue.push(socket);
       socket.emit("waitingForOpponent");
@@ -162,14 +157,8 @@ io.on("connection", function (socket) {
   socket.on("playAgain", function (data) {
     const roomUniqueId = data.roomUniqueId;
     const currentUserValues = rooms[roomUniqueId].id.find((player) => player.socket === socket.id);
-
     Object.assign(currentUserValues, {playAgain: data.playAgain});
-
-    console.log(data.playAgain);
-    console.log(currentUserValues);
-
     const getPlayAgain = rooms[roomUniqueId].id.map((a) => a.playAgain);
-    console.log(getPlayAgain);
 
     if (!getPlayAgain.some(elem => elem === undefined)) {
       const isAllPlayAgain = getPlayAgain.every(v => v === true);
@@ -178,7 +167,7 @@ io.on("connection", function (socket) {
         if (rooms[roomUniqueId]) {
           rooms[roomUniqueId].p1Choice = null;
           rooms[roomUniqueId].p2Choice = null;
-          io.to(roomUniqueId).emit("newGame", { roomUniqueId: roomUniqueId });
+          io.to(roomUniqueId).emit("gamePlayAgain");
         }
       } else {
         if (rooms[roomUniqueId]) {
@@ -186,8 +175,6 @@ io.on("connection", function (socket) {
           delete rooms[data.roomUniqueId];
         }
       }
-    } else {
-      console.log("got undefined");
     }
   });
 
