@@ -267,6 +267,7 @@ socket.on("result", function (data) {
         login: login,
         isWinner: isGameWinner,
         gameEnd: gameEnd,
+        roundsWon: roundsWon
       });
       gameEnd = false;
       isGameWinner = false;
